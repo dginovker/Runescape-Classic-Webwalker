@@ -5,26 +5,46 @@ from tkinter import messagebox, simpledialog
 
 class Graph:
     def __init__(self):
-        if not os.path.exists("graph.json"):
-            self.nodes = []
-            self.edges = []
-            self.edge_labels = {}
-        else:
-            with open("graph.json", "r") as f:
-                data = json.load(f)
-                self.nodes = data["nodes"]
-                self.edges = data["edges"]
-                self.edge_labels = data.get("labels", {})
+        self.filename = "graph.txt"
+        self.nodes = []
+        self.edges = []
+        self.edge_labels = {}
+        if os.path.exists(self.filename):
+            self.load()
 
     def save(self):
-        save_data = {
-            "nodes": self.nodes,
-            "edges": self.edges,
-            "labels": self.edge_labels,
-        }
-        with open("graph.json", "w") as f:
-            json.dump(save_data, f)
+        with open(self.filename, "w") as f:
+            for node in self.nodes:
+                f.write(f"N:{node[0]},{node[1]}\n")
+            for edge in self.edges:
+                f.write(f"E:{edge[0][0]},{edge[0][1]},{edge[1][0]},{edge[1][1]}\n")
+            for edge, label in self.edge_labels.items():
+                node1, node2 = edge.split("-")
+                f.write(f"L:{node1},{node2},{label}\n")
         messagebox.showinfo("Save", "Graph saved successfully.")
+
+    def load(self):
+        with open(self.filename, "r") as f:
+            for line in f:
+                if line.startswith("N:"):
+                    parts = line[2:].strip().split(",")
+                    self.nodes.append((int(parts[0]), int(parts[1])))
+                elif line.startswith("E:"):
+                    parts = line[2:].strip().split(",")
+                    self.edges.append(
+                        ((int(parts[0]), int(parts[1])), (int(parts[2]), int(parts[3])))
+                    )
+                elif line.startswith("L:"):
+                    parts = line[2:].strip().split(",")
+                    edge = (
+                        (int(parts[0]), int(parts[1])),
+                        (int(parts[2]), int(parts[3])),
+                    )
+                    self.edge_labels[self.edge_to_string(edge)] = parts[4]
+
+    def edge_to_string(self, edge):
+        edge = self.get_edge(edge[0], edge[1])
+        return f"{edge[0][0]},{edge[0][1]}-{edge[1][0]},{edge[1][1]}"
 
     def create_edge(self, node_from, node_to):
         edge = self.get_edge(node_from, node_to)
@@ -71,9 +91,6 @@ class Graph:
     def get_edge(self, node1, node2):
         # Sort nodes to treat edges as undirected
         return sorted([node1, node2], key=lambda x: (x[0], x[1]))
-    
-    def edge_to_string(self, edge):
-        return str(edge[0]) + "-" + str(edge[1])
 
     def find_closest_node(self, coords):
         closest_node = None
