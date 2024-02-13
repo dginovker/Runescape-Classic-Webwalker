@@ -2,7 +2,7 @@
 
 ![Image showing nodes around Gnome Stronghold entrance](https://i.imgur.com/J0m93lq.png)
 
-GUI program for generating a `graph.json` of traversable paths around Runescape Classic.
+GUI program for generating a `graph.txt` of traversable paths around Runescape Classic.
 
 Very useful for writing highly efficient bot walking APIs that can go anywhere in the map.
 
@@ -27,4 +27,4 @@ Very useful for writing highly efficient bot walking APIs that can go anywhere i
 ## How to use with a Bot Client
 
 * I plan to add this manually to APOS and IdleRSC. Simply use their `walkTowards` API method (todo)
-* If you want to integrate this manually, 1. Find a node in the graph you can walk to from your start 2. Astar on `graph.json` until you get close to the end 3. Walk to your end position. You will also need to implement custom handlers for all the labeled edges, since those edges probably need custom logic
+* If you want to integrate this manually, 1. Parse `graph.txt` (I kept it as simple as possible) 2. Find a node in the graph you can walk to from your start 3. Astar until you get close to the end 4. Walk to your end position. You will also need to implement custom handlers for all the labeled edges, since those edges probably need custom logic
