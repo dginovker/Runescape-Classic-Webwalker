@@ -46,8 +46,8 @@ class Graph:
                 self.delete_edge(edge)
                 redraw()
 
-    def delete_node(self, node):
-        if messagebox.askyesno(
+    def delete_node(self, node, confirm):
+        if not confirm or messagebox.askyesno(
             "Delete Node", "Do you want to delete this node and its connected edges?"
         ):
             self.nodes.remove(node)

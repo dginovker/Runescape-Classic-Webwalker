@@ -25,6 +25,32 @@ class ImageEditor:
         self.save_button.grid(row=0, column=2)
         self.drawer.redraw()
 
+        # Undo functionality
+        self.actions_history = []
+
+    def add_action(self, action):
+        self.actions_history.append(action)
+
+    def undo(self):
+        if not self.actions_history:
+            return
+        action = self.actions_history.pop()
+        action_type, data = action
+
+        if action_type == 'add_node':
+            self.graph.delete_node(data, False)
+            self.selected_node = None
+        elif action_type == 'delete_node':
+            self.graph.add_node(data['coords'])
+            for edge in data['edges']:
+                self.graph.create_edge(edge[0], edge[1])
+        elif action_type == 'add_edge':
+            self.graph.delete_edge(data)
+        elif action_type == 'delete_edge':
+            self.graph.create_edge(data[0], data[1])
+
+        self.drawer.redraw()
+
     def on_click(self, event):
         x, y = (event.x / self.zoom_factor + self.offset_x), (
             event.y / self.zoom_factor + self.offset_y
@@ -36,16 +62,14 @@ class ImageEditor:
             if not self.selected_node:
                 self.selected_node = closest_node
             elif self.selected_node == closest_node:
-                self.graph.delete_node(
-                    closest_node
-                )  # Delete node if it's the selected one
+                # Capture delete node action for undo
+                self.add_action(('delete_node', {'coords': closest_node, 'edges': self.graph.edges_connected(closest_node)}))
+                self.graph.delete_node(closest_node, True)
                 self.selected_node = None
-                self.drawer.redraw()  # Ensure the canvas is updated immediately after deletion
-            elif (
-                self.graph.get_edge(self.selected_node, closest_node)
-                not in self.graph.edges
-            ):
-                # Create an edge
+                self.drawer.redraw()
+            elif self.graph.get_edge(self.selected_node, closest_node) not in self.graph.edges:
+                # Capture add edge action for undo
+                self.add_action(('add_edge', (self.selected_node, closest_node)))
                 self.graph.create_edge(self.selected_node, closest_node)
                 self.selected_node = closest_node
             else:
@@ -57,15 +81,20 @@ class ImageEditor:
                 )
                 self.selected_node = closest_node
         else:
+            # Capture add node action for undo
+            self.add_action(('add_node', coords))
             self.graph.add_node(coords)
             if self.selected_node:
                 self.graph.create_edge(self.selected_node, coords)
-            self.selected_node = coords  # Automatically select the new node
+            self.selected_node = coords
 
-        self.drawer.redraw()  # Redraw after any click action to ensure the canvas is up-to-date
+        self.drawer.redraw()
 
     def on_key(self, event):
-        self.handle_navigation(event.keysym)
+        if event.keysym == 'z' and (event.state & 0x0004):  # CTRL+Z
+            self.undo()
+        else:
+            self.handle_navigation(event.keysym)
 
     def handle_navigation(self, key):
         step = 30 / self.zoom_factor
