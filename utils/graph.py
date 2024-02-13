@@ -27,16 +27,12 @@ class Graph:
         messagebox.showinfo("Save", "Graph saved successfully.")
 
     def create_edge(self, node_from, node_to):
-        edge = [node_from, node_to]
-        edge_reversed = [node_to, node_from]
-        if edge not in self.edges and edge_reversed not in self.edges:
+        edge = self.get_edge(node_from, node_to)
+        if edge not in self.edges:
             self.edges.append(edge)
-            return True
-        return False
 
     def prompt_edge_label(self, edge, uimaster, redraw):
-        edge_key = self.make_edge_key(edge[0], edge[1])
-        existing_label = self.edge_labels.get(edge_key, "")
+        existing_label = self.edge_labels.get(self.edge_to_string(edge), "")
         label = simpledialog.askstring(
             "Label Edge",
             "Enter label for this edge:",
@@ -44,7 +40,7 @@ class Graph:
             parent=uimaster,
         )
         if label is not None:  # Check for Cancel click
-            self.edge_labels[edge_key] = label
+            self.edge_labels[self.edge_to_string(edge)] = label
         else:
             if messagebox.askyesno("Delete Edge", "Do you want to delete this edge?"):
                 self.delete_edge(edge)
@@ -59,7 +55,7 @@ class Graph:
             edges_to_remove = [edge for edge in self.edges if node in edge]
             for edge in edges_to_remove:
                 self.edges.remove(edge)
-                edge_key = self.make_edge_key(edge[0], edge[1])
+                edge_key = self.edge_to_string(self.get_edge(edge[0], edge[1]))
                 if edge_key in self.edge_labels:
                     del self.edge_labels[edge_key]
 
@@ -67,19 +63,17 @@ class Graph:
         self.nodes.append(coords)
 
     def delete_edge(self, edge):
-        edge_key = self.make_edge_key(edge[0], edge[1])
         if edge in self.edges:
             self.edges.remove(edge)
-        elif [edge[1], edge[0]] in self.edges:
-            # Remove reversed edge if present
-            self.edges.remove([edge[1], edge[0]])
-        if edge_key in self.edge_labels:
-            del self.edge_labels[edge_key]
+        if self.edge_to_string(edge) in self.edge_labels:
+            del self.edge_labels[self.edge_to_string(edge)]
 
-    def make_edge_key(self, node1, node2):
+    def get_edge(self, node1, node2):
         # Sort nodes to treat edges as undirected
-        sorted_nodes = sorted([node1, node2], key=lambda x: (x[0], x[1]))
-        return str(sorted_nodes[0]) + "-" + str(sorted_nodes[1])
+        return sorted([node1, node2], key=lambda x: (x[0], x[1]))
+    
+    def edge_to_string(self, edge):
+        return str(edge[0]) + "-" + str(edge[1])
 
     def find_closest_node(self, coords):
         closest_node = None
