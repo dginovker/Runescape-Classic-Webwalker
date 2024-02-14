@@ -21,6 +21,9 @@ class ImageEditor:
         self.canvas.bind("<Motion>", self.on_motion)
         self.canvas.bind("<B1-Motion>", self.on_drag)  # Dragging
         self.master.bind("<KeyPress>", self.on_key)
+        self.canvas.bind("<MouseWheel>", self.on_mousewheel)  # Windows scroll
+        self.canvas.bind("<Button-4>", self.on_mousewheel)  # Linux scroll up
+        self.canvas.bind("<Button-5>", self.on_mousewheel)  # Linux scroll down
         self.label = tk.Label(master, text="Coordinates: (0, 0)")
         self.label.grid(row=0, column=1)
         self.save_button = tk.Button(master, text="Save", command=self.graph.save)
@@ -32,6 +35,17 @@ class ImageEditor:
         self.dragging = False  # To differentiate dragging from clicking
         self.drag_start_x = None
         self.drag_start_y = None
+
+    def on_mousewheel(self, event):
+        # Zoom in or out
+        zoom_speed = 0.1  # Adjust zoom speed as needed
+        if event.delta > 0 or event.num == 4:  # Scroll up or Linux scroll up
+            self.zoom_factor = min(self.zoom_factor + zoom_speed, 5.0)
+        elif event.delta < 0 or event.num == 5:  # Scroll down or Linux scroll down
+            self.zoom_factor = max(
+                self.zoom_factor - zoom_speed, 0.1
+            )  # Prevent zooming out too much
+        self.drawer.redraw()
 
     def on_click_start(self, event):
         self.drag_start_x, self.drag_start_y = event.x, event.y
@@ -150,7 +164,7 @@ class ImageEditor:
         action_type, data = self.actions_history.pop()
 
         if action_type == "add_node":
-            self.graph.delete_node(data, False)
+            self.graph.delete_node(data)
             self.selected_node = None
         elif action_type == "delete_node":
             self.graph.add_node(data["coords"])
