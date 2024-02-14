@@ -9,17 +9,17 @@ class ImageEditor:
         self.master = master
         self.original_img = Image.open(img_path)
         self.zoom_factor = 1.0
-        self.offset_x, self.offset_y = 0, 0
+        self.offset_x, self.offset_y = 400, 400
         self.selected_node = None
 
         self.graph = Graph()
         self.drawer = Drawer(self)
         self.canvas = tk.Canvas(master, width=400, height=400)
         self.canvas.grid(row=1, column=0, columnspan=3)
-        self.canvas.bind("<Button-1>", self.on_click_start)  # Start click
-        self.canvas.bind("<ButtonRelease-1>", self.on_click_end)  # End click
+        self.canvas.bind("<Button-1>", self.on_click_start)
+        self.canvas.bind("<ButtonRelease-1>", self.on_click_end)
         self.canvas.bind("<Motion>", self.on_motion)
-        self.canvas.bind("<B1-Motion>", self.on_drag)  # Dragging
+        self.canvas.bind("<B1-Motion>", self.on_drag)
         self.master.bind("<KeyPress>", self.on_key)
         self.canvas.bind("<MouseWheel>", self.on_mousewheel)  # Windows scroll
         self.canvas.bind("<Button-4>", self.on_mousewheel)  # Linux scroll up
@@ -49,13 +49,6 @@ class ImageEditor:
 
     def on_click_start(self, event):
         self.drag_start_x, self.drag_start_y = event.x, event.y
-        self.canvas.config(cursor="fleur")  # Change cursor to indicate dragging
-
-    def on_click_end(self, event):
-        if not self.dragging:  # If there was no dragging, process the click
-            self.on_click(event)
-        self.dragging = False
-        self.canvas.config(cursor="")  # Revert cursor
 
     def on_motion(self, event):
         self.drawer.update_coordinates(event)
@@ -65,11 +58,36 @@ class ImageEditor:
             return
         dx = event.x - self.drag_start_x
         dy = event.y - self.drag_start_y
-        self.offset_x -= dx / self.zoom_factor
-        self.offset_y -= dy / self.zoom_factor
-        self.drag_start_x, self.drag_start_y = event.x, event.y
-        self.dragging = True  # Set dragging flag
-        self.drawer.redraw()
+        distance = (
+            dx**2 + dy**2
+        ) ** 0.5  # Calculate distance using Pythagorean theorem
+
+        # Only proceed with dragging if the distance is >= 10 pixels
+        if distance >= 10:
+            self.offset_x -= dx / self.zoom_factor
+            self.offset_y -= dy / self.zoom_factor
+            self.drag_start_x, self.drag_start_y = event.x, event.y
+            if not self.dragging:  # Set dragging flag only if moved more than 10 pixels
+                self.dragging = True
+                self.canvas.config(cursor="fleur")  # Change cursor to indicate dragging
+            self.drawer.redraw()
+
+    def on_click_end(self, event):
+        # Calculate the distance moved to determine if it was a drag or click
+        if self.drag_start_x is not None and self.drag_start_y is not None:
+            dx = event.x - self.drag_start_x
+            dy = event.y - self.drag_start_y
+            distance = (dx**2 + dy**2) ** 0.5
+
+            # Consider it a click only if the distance moved is less than 10 pixels
+            if not self.dragging or distance < 10:
+                self.on_click(event)
+
+        # Reset the dragging state and cursor after the action is complete
+        self.dragging = False
+        self.canvas.config(cursor="")  # Revert cursor
+        self.drag_start_x = None  # Reset drag start positions
+        self.drag_start_y = None
 
     def on_click(self, event):
         if self.dragging:  # Skip node placement if dragging occurred
@@ -81,7 +99,7 @@ class ImageEditor:
         coords = (int(x), int(y))
         closest_node, distance = self.graph.find_closest_node(coords)
 
-        if distance <= 9:  # Click is within 3 tiles of an existing node
+        if distance <= 5 * 3:  # Click is within 5 tiles of an existing node
             if not self.selected_node:
                 self.selected_node = closest_node
             elif self.selected_node == closest_node:
