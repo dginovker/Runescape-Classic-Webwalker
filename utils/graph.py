@@ -66,18 +66,18 @@ class Graph:
                 self.delete_edge(edge)
                 redraw()
 
-    def delete_node(self, node, confirm):
-        if not confirm or messagebox.askyesno(
-            "Delete Node", "Do you want to delete this node and its connected edges?"
-        ):
-            self.nodes.remove(node)
-            # Remove connected edges and labels
-            edges_to_remove = [edge for edge in self.edges if node in edge]
-            for edge in edges_to_remove:
-                self.edges.remove(edge)
-                edge_key = self.edge_to_string(self.get_edge(edge[0], edge[1]))
-                if edge_key in self.edge_labels:
-                    del self.edge_labels[edge_key]
+    def delete_node(self, node):
+        self.nodes.remove(node)
+        # Remove connected edges and labels
+        edges_to_remove = self.edges_connected(node)
+        for edge in edges_to_remove:
+            self.edges.remove(edge)
+            edge_key = self.edge_to_string(self.get_edge(edge[0], edge[1]))
+            if edge_key in self.edge_labels:
+                del self.edge_labels[edge_key]
+
+    def edges_connected(self, node):
+        return [edge for edge in self.edges if node in edge]
 
     def add_node(self, coords):
         self.nodes.append(coords)

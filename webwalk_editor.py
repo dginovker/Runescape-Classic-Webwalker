@@ -16,8 +16,10 @@ class ImageEditor:
         self.drawer = Drawer(self)
         self.canvas = tk.Canvas(master, width=400, height=400)
         self.canvas.grid(row=1, column=0, columnspan=3)
-        self.canvas.bind("<Button-1>", self.on_click)
-        self.canvas.bind("<Motion>", self.drawer.update_coordinates)
+        self.canvas.bind("<Button-1>", self.on_click_start)  # Start click
+        self.canvas.bind("<ButtonRelease-1>", self.on_click_end)  # End click
+        self.canvas.bind("<Motion>", self.on_motion)
+        self.canvas.bind("<B1-Motion>", self.on_drag)  # Dragging
         self.master.bind("<KeyPress>", self.on_key)
         self.label = tk.Label(master, text="Coordinates: (0, 0)")
         self.label.grid(row=0, column=1)
@@ -27,31 +29,38 @@ class ImageEditor:
 
         # Undo functionality
         self.actions_history = []
+        self.dragging = False  # To differentiate dragging from clicking
+        self.drag_start_x = None
+        self.drag_start_y = None
 
-    def add_action(self, action):
-        self.actions_history.append(action)
+    def on_click_start(self, event):
+        self.drag_start_x, self.drag_start_y = event.x, event.y
+        self.canvas.config(cursor="fleur")  # Change cursor to indicate dragging
 
-    def undo(self):
-        if not self.actions_history:
+    def on_click_end(self, event):
+        if not self.dragging:  # If there was no dragging, process the click
+            self.on_click(event)
+        self.dragging = False
+        self.canvas.config(cursor="")  # Revert cursor
+
+    def on_motion(self, event):
+        self.drawer.update_coordinates(event)
+
+    def on_drag(self, event):
+        if not self.drag_start_x or not self.drag_start_y:
             return
-        action = self.actions_history.pop()
-        action_type, data = action
-
-        if action_type == 'add_node':
-            self.graph.delete_node(data, False)
-            self.selected_node = None
-        elif action_type == 'delete_node':
-            self.graph.add_node(data['coords'])
-            for edge in data['edges']:
-                self.graph.create_edge(edge[0], edge[1])
-        elif action_type == 'add_edge':
-            self.graph.delete_edge(data)
-        elif action_type == 'delete_edge':
-            self.graph.create_edge(data[0], data[1])
-
+        dx = event.x - self.drag_start_x
+        dy = event.y - self.drag_start_y
+        self.offset_x -= dx / self.zoom_factor
+        self.offset_y -= dy / self.zoom_factor
+        self.drag_start_x, self.drag_start_y = event.x, event.y
+        self.dragging = True  # Set dragging flag
         self.drawer.redraw()
 
     def on_click(self, event):
+        if self.dragging:  # Skip node placement if dragging occurred
+            return
+
         x, y = (event.x / self.zoom_factor + self.offset_x), (
             event.y / self.zoom_factor + self.offset_y
         )
@@ -62,14 +71,15 @@ class ImageEditor:
             if not self.selected_node:
                 self.selected_node = closest_node
             elif self.selected_node == closest_node:
-                # Capture delete node action for undo
-                self.add_action(('delete_node', {'coords': closest_node, 'edges': self.graph.edges_connected(closest_node)}))
-                self.graph.delete_node(closest_node, True)
                 self.selected_node = None
-                self.drawer.redraw()
-            elif self.graph.get_edge(self.selected_node, closest_node) not in self.graph.edges:
+            elif (
+                self.graph.get_edge(self.selected_node, closest_node)
+                not in self.graph.edges
+            ):
                 # Capture add edge action for undo
-                self.add_action(('add_edge', (self.selected_node, closest_node)))
+                self.actions_history.append(
+                    ("add_edge", (self.selected_node, closest_node))
+                )
                 self.graph.create_edge(self.selected_node, closest_node)
                 self.selected_node = closest_node
             else:
@@ -82,7 +92,7 @@ class ImageEditor:
                 self.selected_node = closest_node
         else:
             # Capture add node action for undo
-            self.add_action(('add_node', coords))
+            self.actions_history.append(("add_node", coords))
             self.graph.add_node(coords)
             if self.selected_node:
                 self.graph.create_edge(self.selected_node, coords)
@@ -90,8 +100,25 @@ class ImageEditor:
 
         self.drawer.redraw()
 
+    def delete_node(self, node):
+        if not node:
+            return
+        # Capture delete node action for undo
+        self.actions_history.append(
+            (
+                "delete_node",
+                {
+                    "coords": node,
+                    "edges": self.graph.edges_connected(node),
+                },
+            )
+        )
+        self.graph.delete_node(node)
+        self.selected_node = None
+        self.drawer.redraw()
+
     def on_key(self, event):
-        if event.keysym == 'z' and (event.state & 0x0004):  # CTRL+Z
+        if event.keysym == "z" and (event.state & 0x0004):  # CTRL+Z
             self.undo()
         else:
             self.handle_navigation(event.keysym)
@@ -113,6 +140,27 @@ class ImageEditor:
             self.zoom_factor = max(self.zoom_factor - zoom_step, 1.0)
         elif key in ["Escape", "space", "Return", "KP_Enter"]:
             self.selected_node = None
+        elif key in ["BackSpace", "Delete"]:
+            self.delete_node(self.selected_node)
+        self.drawer.redraw()
+
+    def undo(self):
+        if not self.actions_history:
+            return
+        action_type, data = self.actions_history.pop()
+
+        if action_type == "add_node":
+            self.graph.delete_node(data, False)
+            self.selected_node = None
+        elif action_type == "delete_node":
+            self.graph.add_node(data["coords"])
+            for edge in data["edges"]:
+                self.graph.create_edge(edge[0], edge[1])
+        elif action_type == "add_edge":
+            self.graph.delete_edge(data)
+        elif action_type == "delete_edge":
+            self.graph.create_edge(data[0], data[1])
+
         self.drawer.redraw()
 
 
