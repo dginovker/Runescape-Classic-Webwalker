@@ -40,7 +40,7 @@ class ImageEditor:
         # Zoom in or out
         zoom_speed = 0.1  # Adjust zoom speed as needed
         if event.delta > 0 or event.num == 4:  # Scroll up or Linux scroll up
-            self.zoom_factor = min(self.zoom_factor + zoom_speed, 5.0)
+            self.zoom_factor = min(self.zoom_factor + zoom_speed, 20.0)
         elif event.delta < 0 or event.num == 5:  # Scroll down or Linux scroll down
             self.zoom_factor = max(
                 self.zoom_factor - zoom_speed, 0.1
