@@ -26,7 +26,7 @@ class Drawer:
 
     def draw_node(self, node, selected=False):
         x, y = node
-        x = (x - self.image_editor.offset_x) * self.image_editor.zoom_factor
+        x = (900 - x - self.image_editor.offset_x) * self.image_editor.zoom_factor
         y = (y - self.image_editor.offset_y) * self.image_editor.zoom_factor
         if 0 <= x <= 400 and 0 <= y <= 400:
             color = "green" if selected else "red"
@@ -34,9 +34,9 @@ class Drawer:
 
     def draw_edge(self, edge):
         start, end = edge[0], edge[1]
-        start_x, start_y = ((start[0] - self.image_editor.offset_x) * self.image_editor.zoom_factor,
+        start_x, start_y = ((900 - start[0] - self.image_editor.offset_x) * self.image_editor.zoom_factor,
                             (start[1] - self.image_editor.offset_y) * self.image_editor.zoom_factor)
-        end_x, end_y = ((end[0] - self.image_editor.offset_x) * self.image_editor.zoom_factor,
+        end_x, end_y = ((900 - end[0] - self.image_editor.offset_x) * self.image_editor.zoom_factor,
                         (end[1] - self.image_editor.offset_y) * self.image_editor.zoom_factor)
 
         # Check if at least one of the endpoints is within the visible area
@@ -48,6 +48,6 @@ class Drawer:
                                                      text=self.image_editor.graph.edge_labels[edge_key], fill="blue")
 
     def update_coordinates(self, event):
-        x, y = (event.x / self.image_editor.zoom_factor + self.image_editor.offset_x), \
+        x, y = 900 - (event.x / self.image_editor.zoom_factor + self.image_editor.offset_x), \
                (event.y / self.image_editor.zoom_factor + self.image_editor.offset_y)
         self.image_editor.label.config(text=f"Coordinates: ({int(x)}, {int(y)})")

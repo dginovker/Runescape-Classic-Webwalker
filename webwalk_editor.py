@@ -93,10 +93,11 @@ class ImageEditor:
         if self.dragging:  # Skip node placement if dragging occurred
             return
 
-        x, y = (event.x / self.zoom_factor + self.offset_x), (
+        x, y = 900 - (event.x / self.zoom_factor + self.offset_x), (
             event.y / self.zoom_factor + self.offset_y
         )
         coords = (int(x), int(y))
+        print(x, coords)
         closest_node, distance = self.graph.find_closest_node(coords)
 
         if distance <= 5 * 3:  # Click is within 5 tiles of an existing node
