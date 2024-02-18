@@ -8,13 +8,13 @@ class ImageEditor:
     def __init__(self, master, img_path):
         self.master = master
         self.original_img = Image.open(img_path)
-        self.zoom_factor = 1.0
-        self.offset_x, self.offset_y = 400, 400
+        self.zoom_factor = 4.0
+        self.offset_x, self.offset_y = 600, 450
         self.selected_node = None
 
         self.graph = Graph()
         self.drawer = Drawer(self)
-        self.canvas = tk.Canvas(master, width=400, height=400)
+        self.canvas = tk.Canvas(master, width=750, height=750)
         self.canvas.grid(row=1, column=0, columnspan=3)
         self.canvas.bind("<Button-1>", self.on_click_start)
         self.canvas.bind("<ButtonRelease-1>", self.on_click_end)
@@ -97,7 +97,6 @@ class ImageEditor:
             event.y / self.zoom_factor + self.offset_y
         )
         coords = (int(x), int(y))
-        print(x, coords)
         closest_node, distance = self.graph.find_closest_node(coords)
 
         if distance <= 5 * 3:  # Click is within 5 tiles of an existing node
