@@ -90,7 +90,9 @@ class Graph:
 
     def get_edge(self, node1, node2):
         # Sort nodes to treat edges as undirected
-        return sorted([node1, node2], key=lambda x: (x[0], x[1]))
+        if node1[0] > node2[0]:
+            return (node2, node1)
+        return (node1, node2)
 
     def find_closest_node(self, coords):
         closest_node = None
