@@ -89,7 +89,7 @@ class Graph:
 
     def get_edge(self, node1, node2):
         # Sort nodes to treat edges as undirected
-        if node1[0] > node2[0]:
+        if node1[0] > node2[0] or node1[0] == node2[0] and node1[1] > node2[1]:
             return (node2, node1)
         return (node1, node2)
 
