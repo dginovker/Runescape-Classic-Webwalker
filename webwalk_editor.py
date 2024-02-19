@@ -123,14 +123,16 @@ class ImageEditor:
                 )
                 self.selected_node = closest_node
         else:
+            # Create a new node/potentially a new edge
             if self.graph.walkable_tiles[coords[0]][coords[1]] == 0:
                 self.label.config(text=f"!  !  !   Tile {coords} isn't walkable   !  !  !")
                 return
-            # Capture add node action for undo
             self.actions_history.append(("add_node", coords))
             self.graph.add_node(coords)
             if self.selected_node:
-                self.graph.create_edge(self.selected_node, coords)
+                if not self.graph.create_edge(self.selected_node, coords):
+                    self.graph.delete_node(coords)
+                    return
             self.selected_node = coords
 
         self.drawer.redraw()
