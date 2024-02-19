@@ -1,45 +1,74 @@
 import os
 from tkinter import messagebox, simpledialog
+import numpy as np
+from collections import deque
 
 
 class Graph:
     def __init__(self):
         self.filename = "graph.txt"
+        self.walkable_tiles = self.load_walkable_tiles()
         self.nodes = []
         self.edges = []
         self.edge_labels = {}
         if os.path.exists(self.filename):
             self.load()
 
+    def load_walkable_tiles(self):
+        walkable = np.zeros((900, 4050), dtype=np.byte)
+        with open("walkable_tiles.bin", "rb") as file:
+            for i in range(900):
+                for j in range(4050):
+                    byte = file.read(1)
+                    walkable[i][j] = 1 if ord(byte) > 0 else 0
+        return walkable
+
+    def calculate_distance(self, start, end):
+        queue = deque([(start, 0)])  # (position, distance)
+        visited = set([start])
+        directions = [(0, 1), (1, 0), (0, -1), (-1, 0)]  # Down, Right, Up, Left
+
+        while queue:
+            (x, y), distance = queue.popleft()
+            if (x, y) == end:
+                return distance
+
+            for dx, dy in directions:
+                nx, ny = x + dx, y + dy
+                if (nx, ny) in visited or self.walkable_tiles[nx][ny] == 0:
+                    continue
+                visited.add((nx, ny))
+                queue.append(((nx, ny), distance + 1))
+
+        return -1  # Return -1 if no path found
+
     def save(self):
         with open(self.filename, "w") as f:
-            for node in self.nodes:
-                f.write(f"N:{node[0]},{node[1]}\n")
             for edge in self.edges:
-                f.write(f"E:{edge[0][0]},{edge[0][1]},{edge[1][0]},{edge[1][1]}\n")
-            for edge, label in self.edge_labels.items():
-                node1, node2 = edge.split("-")
-                f.write(f"L:{node1},{node2},{label}\n")
+                distance = self.calculate_distance(edge[0], edge[1])
+                label = self.edge_labels.get(self.edge_to_string(edge), "")
+                f.write(
+                    f"{edge[0][0]},{edge[0][1]},{edge[1][0]},{edge[1][1]},{distance},{label}\n"
+                )
         messagebox.showinfo("Save", "Graph saved successfully.")
 
     def load(self):
         with open(self.filename, "r") as f:
             for line in f:
-                if line.startswith("N:"):
-                    parts = line[2:].strip().split(",")
-                    self.nodes.append((int(parts[0]), int(parts[1])))
-                elif line.startswith("E:"):
-                    parts = line[2:].strip().split(",")
-                    self.edges.append(
-                        ((int(parts[0]), int(parts[1])), (int(parts[2]), int(parts[3])))
-                    )
-                elif line.startswith("L:"):
-                    parts = line[2:].strip().split(",")
-                    edge = (
-                        (int(parts[0]), int(parts[1])),
-                        (int(parts[2]), int(parts[3])),
-                    )
-                    self.edge_labels[self.edge_to_string(edge)] = parts[4]
+                parts = line.strip().split(",")
+                node1 = (int(parts[0]), int(parts[1]))
+                node2 = (int(parts[2]), int(parts[3]))
+                # Ensure nodes for the current edge are added
+                if node1 not in self.nodes:
+                    self.nodes.append(node1)
+                if node2 not in self.nodes:
+                    self.nodes.append(node2)
+                # Add edge
+                self.edges.append((node1, node2))
+                # Add label if exists
+                label = parts[5] if len(parts) > 5 else ""
+                if label:
+                    self.edge_labels[self.edge_to_string((node1, node2))] = label
 
     def edge_to_string(self, edge):
         edge = self.get_edge(edge[0], edge[1])

@@ -2,7 +2,6 @@ import tkinter as tk
 from PIL import Image
 from utils.graph import Graph
 from utils.draw import Drawer
-from utils.walkable import walkable_tile
 
 
 class ImageEditor:
@@ -124,7 +123,7 @@ class ImageEditor:
                 )
                 self.selected_node = closest_node
         else:
-            if not walkable_tile(coords):
+            if self.graph.walkable_tiles[coords[0]][coords[1]] == 0:
                 self.label.config(text=f"!  !  !   Tile {coords} isn't walkable   !  !  !")
                 return
             # Capture add node action for undo
