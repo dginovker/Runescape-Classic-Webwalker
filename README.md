@@ -9,7 +9,7 @@ Very useful for writing highly efficient bot walking APIs that can go anywhere i
 ## Features
 
 * Load the RSC map (that was shamelessly stolen from APOS)
-* Load the existing graph.json
+* Load the existing graph.txt
 * Plant nodes and edges
 * Label edges (in case you need custom code besides just "walkTo" to go between two nodes, i.e open a Gate, use a Ladder)
 
@@ -18,6 +18,7 @@ Very useful for writing highly efficient bot walking APIs that can go anywhere i
 * Arrowkeys to move around the map
 * `+` and `-` to zoom
 * `Esc` to deselect the currently selected node
+* `^Z` to undo last action
 
 ## How to run
 
