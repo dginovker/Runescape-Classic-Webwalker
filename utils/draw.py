@@ -42,8 +42,8 @@ class Drawer:
 
             if selected:
                 # Adjust radii by the zoom factor
-                radius1 = 16 * self.image_editor.zoom_factor
-                radius2 = 21 * self.image_editor.zoom_factor
+                radius1 = 14 * self.image_editor.zoom_factor
+                radius2 = 18 * self.image_editor.zoom_factor
 
                 # Draw first hollow circle
                 self.image_editor.canvas.create_oval(
@@ -61,7 +61,7 @@ class Drawer:
                     y - radius2,
                     x + radius2,
                     y + radius2,
-                    outline="green",
+                    outline="red",
                     width=2,
                 )
 
