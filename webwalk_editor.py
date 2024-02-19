@@ -193,7 +193,7 @@ class ImageEditor:
             for edge in data["edges"]:
                 self.graph.create_edge(edge[0], edge[1])
         elif action_type == "add_edge":
-            self.graph.delete_edge(data)
+            self.graph.delete_edge(self.graph.get_edge(data[0], data[1]))
         elif action_type == "delete_edge":
             self.graph.create_edge(data[0], data[1])
 
