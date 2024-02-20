@@ -1,3 +1,4 @@
+from functools import lru_cache
 import os
 from tkinter import messagebox, simpledialog
 import numpy as np
@@ -9,7 +10,7 @@ class Graph:
         self.filename = "graph.txt"
         self.walkable_tiles = self.load_walkable_tiles()
         self.nodes = []
-        self.edges = []
+        self.edges = []  # This will now store (start, end, distance) tuples
         self.edge_labels = {}
         if os.path.exists(self.filename):
             self.load()
@@ -45,10 +46,9 @@ class Graph:
     def save(self):
         with open(self.filename, "w") as f:
             for edge in self.edges:
-                distance = self.calculate_distance(edge[0], edge[1])
-                label = self.edge_labels.get(self.edge_to_string(edge), "")
+                # edge already includes distance as its third element
                 f.write(
-                    f"{edge[0][0]},{edge[0][1]},{edge[1][0]},{edge[1][1]},{distance},{label}\n"
+                    f"{edge[0][0]},{edge[0][1]},{edge[1][0]},{edge[1][1]},{edge[2]},{self.edge_labels.get(self.edge_to_string(edge), '')}\n"
                 )
         messagebox.showinfo("Save", "Graph saved successfully.")
 
@@ -58,20 +58,21 @@ class Graph:
                 parts = line.strip().split(",")
                 node1 = (int(parts[0]), int(parts[1]))
                 node2 = (int(parts[2]), int(parts[3]))
+                distance = int(parts[4])
                 # Ensure nodes for the current edge are added
                 if node1 not in self.nodes:
                     self.nodes.append(node1)
                 if node2 not in self.nodes:
                     self.nodes.append(node2)
-                # Add edge
-                self.edges.append((node1, node2))
+                # Add edge with distance
+                self.edges.append((node1, node2, distance))
                 # Add label if exists
                 label = parts[5] if len(parts) > 5 else ""
                 if label:
-                    self.edge_labels[self.edge_to_string((node1, node2))] = label
+                    self.edge_labels[self.edge_to_string((node1, node2, distance))] = label
 
     def edge_to_string(self, edge):
-        edge = self.get_edge(edge[0], edge[1])
+        # Adapted to handle (node1, node2, distance) format
         return f"{edge[0][0]},{edge[0][1]}-{edge[1][0]},{edge[1][1]}"
 
     def create_edge(self, node_from, node_to):
@@ -79,7 +80,7 @@ class Graph:
         if dist == -1 or dist > 25:
             messagebox.showerror("Error", "No path found between these nodes.")
             return False
-        edge = self.get_edge(node_from, node_to)
+        edge = (node_from, node_to, dist)  # Now includes distance
         if edge not in self.edges:
             self.edges.append(edge)
         return True
@@ -105,12 +106,12 @@ class Graph:
         edges_to_remove = self.edges_connected(node)
         for edge in edges_to_remove:
             self.edges.remove(edge)
-            edge_key = self.edge_to_string(self.get_edge(edge[0], edge[1]))
+            edge_key = self.edge_to_string(edge)
             if edge_key in self.edge_labels:
                 del self.edge_labels[edge_key]
 
     def edges_connected(self, node):
-        return [edge for edge in self.edges if node in edge]
+        return [edge for edge in self.edges if node in edge[:2]]
 
     def add_node(self, coords):
         self.nodes.append(coords)
@@ -118,14 +119,17 @@ class Graph:
     def delete_edge(self, edge):
         if edge in self.edges:
             self.edges.remove(edge)
-        if self.edge_to_string(edge) in self.edge_labels:
-            del self.edge_labels[self.edge_to_string(edge)]
+        edge_key = self.edge_to_string(edge)
+        if edge_key in self.edge_labels:
+            del self.edge_labels[edge_key]
 
+    @lru_cache(None)
     def get_edge(self, node1, node2):
+        dist = self.calculate_distance(node1, node2)  # Calculate distance for every get_edge call
         # Sort nodes to treat edges as undirected
-        if node1[0] > node2[0] or node1[0] == node2[0] and node1[1] > node2[1]:
-            return (node2, node1)
-        return (node1, node2)
+        if node1[0] > node2[0] or (node1[0] == node2[0] and node1[1] > node2[1]):
+            return (node2, node1, dist)
+        return (node1, node2, dist)
 
     def find_closest_node(self, coords):
         closest_node = None
