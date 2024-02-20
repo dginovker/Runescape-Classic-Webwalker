@@ -78,7 +78,6 @@ class Graph:
         return f"{edge[0][0]},{edge[0][1]}-{edge[1][0]},{edge[1][1]}"
 
     def create_edge(self, node_from, node_to):
-        print("Creating edge...")
         dist = self.calculate_distance(node_from, node_to)
         if dist == -1 or dist > 25:
             if messagebox.askyesno(
