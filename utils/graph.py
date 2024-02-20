@@ -1,6 +1,6 @@
 from functools import lru_cache
 import os
-from tkinter import messagebox, simpledialog
+from tkinter import messagebox, simpledialog, Toplevel, Button, Label
 import numpy as np
 from collections import deque
 
@@ -24,6 +24,7 @@ class Graph:
                     walkable[i][j] = 1 if ord(byte) > 0 else 0
         return walkable
 
+    @lru_cache(None)
     def calculate_distance(self, start, end):
         queue = deque([(start, 0)])  # (position, distance)
         visited = set([start])
@@ -64,41 +65,83 @@ class Graph:
                     self.nodes.append(node1)
                 if node2 not in self.nodes:
                     self.nodes.append(node2)
-                # Add edge with distance
                 self.edges.append((node1, node2, distance))
                 # Add label if exists
                 label = parts[5] if len(parts) > 5 else ""
                 if label:
-                    self.edge_labels[self.edge_to_string((node1, node2, distance))] = label
+                    self.edge_labels[self.edge_to_string((node1, node2, distance))] = (
+                        label
+                    )
 
     def edge_to_string(self, edge):
         # Adapted to handle (node1, node2, distance) format
         return f"{edge[0][0]},{edge[0][1]}-{edge[1][0]},{edge[1][1]}"
 
     def create_edge(self, node_from, node_to):
+        print("Creating edge...")
         dist = self.calculate_distance(node_from, node_to)
         if dist == -1 or dist > 25:
-            messagebox.showerror("Error", "No path found between these nodes.")
-            return False
-        edge = (node_from, node_to, dist)  # Now includes distance
+            if messagebox.askyesno(
+                "No Path Found",
+                "Override?",
+            ):
+                dist = -1
+            else:
+                return False
+        edge = (node_from, node_to, dist)  # Now includes distance or override
         if edge not in self.edges:
             self.edges.append(edge)
         return True
 
-    def prompt_edge_label(self, edge, uimaster, redraw):
-        existing_label = self.edge_labels.get(self.edge_to_string(edge), "")
-        label = simpledialog.askstring(
-            "Label Edge",
-            "Enter label for this edge:",
-            initialvalue=existing_label,
-            parent=uimaster,
-        )
-        if label is not None:  # Check for Cancel click
-            self.edge_labels[self.edge_to_string(edge)] = label
-        else:
-            if messagebox.askyesno("Delete Edge", "Do you want to delete this edge?"):
-                self.delete_edge(edge)
+    def edit_edge(self, edge, uimaster, redraw):
+        from tkinter import Toplevel, Button
+
+        class EditEdgeDialog(Toplevel):
+            def __init__(self, graph, master):
+                super().__init__(master)
+                self.graph = graph
+                Label(self, text=f"Edit Edge \"{graph.edge_labels.get(graph.edge_to_string(edge), '')}\"").pack(fill="x")
+                Label(self, text=f"Current dist: {edge[2]}").pack(fill="x")
+                Button(self, text="Delete Edge", command=self.delete_edge).pack(
+                    fill="x"
+                )
+                Button(self, text="Change Label", command=self.change_label).pack(
+                    fill="x"
+                )
+                Button(
+                    self, text="Override Distance", command=self.override_distance
+                ).pack(fill="x")
+
+            def delete_edge(self):
+                self.graph.delete_edge(edge)
                 redraw()
+                self.destroy()
+
+            def change_label(self):
+                new_label = simpledialog.askstring(
+                    "Change Label", "Enter new label:", parent=self
+                )
+                if new_label:
+                    self.graph.edge_labels[self.graph.edge_to_string(edge)] = (
+                        new_label
+                    )
+                    redraw()
+                    self.destroy()
+
+            def override_distance(self):
+                new_distance = simpledialog.askinteger(
+                    "Override Distance", "Enter new distance:", parent=self
+                )
+                if new_distance is not None:
+                    for i, e in enumerate(self.graph.edges):
+                        if e[:2] == edge[:2]:  # Matching the edge to override
+                            self.graph.edges[i] = (e[0], e[1], new_distance)
+                            break
+                    self.destroy()
+
+        dialog = EditEdgeDialog(
+            self, uimaster
+        )  # Make sure uimaster is your Tkinter main window or a widget.
 
     def delete_node(self, node):
         self.nodes.remove(node)
@@ -123,9 +166,14 @@ class Graph:
         if edge_key in self.edge_labels:
             del self.edge_labels[edge_key]
 
-    @lru_cache(None)
     def get_edge(self, node1, node2):
-        dist = self.calculate_distance(node1, node2)  # Calculate distance for every get_edge call
+        # Get a ref to the existing edge, if it exists
+        for edge in self.edges:
+            if edge[:2] == (node1, node2) or edge[:2] == (node2, node1):
+                return edge
+        dist = self.calculate_distance(
+            node1, node2
+        )  # Calculate distance for every get_edge call
         # Sort nodes to treat edges as undirected
         if node1[0] > node2[0] or (node1[0] == node2[0] and node1[1] > node2[1]):
             return (node2, node1, dist)

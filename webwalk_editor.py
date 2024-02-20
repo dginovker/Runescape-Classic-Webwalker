@@ -106,7 +106,7 @@ class ImageEditor:
                 self.selected_node = None
             elif (
                 self.graph.get_edge(self.selected_node, closest_node)
-                not in self.graph.edges
+                not in [self.graph.get_edge(e[0], e[1]) for e in self.graph.edges]
             ):
                 # Capture add edge action for undo
                 self.actions_history.append(
@@ -116,7 +116,7 @@ class ImageEditor:
                 self.selected_node = closest_node
             else:
                 # Add edge label
-                self.graph.prompt_edge_label(
+                self.graph.edit_edge(
                     self.graph.get_edge(self.selected_node, closest_node),
                     self.master,
                     self.drawer.redraw,
